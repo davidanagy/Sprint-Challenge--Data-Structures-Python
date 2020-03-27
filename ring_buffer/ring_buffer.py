@@ -1,4 +1,4 @@
-from doubly_linked_list import DoublyLinkedList, ListNode
+from doubly_linked_list import DoublyLinkedList
 
 
 class RingBuffer:
@@ -8,34 +8,48 @@ class RingBuffer:
         self.storage = DoublyLinkedList()
 
     def append(self, item):
-        if self.storage.length == 0:
-            self.storage.add_to_head(item)
-            self.current = self.storage.head
-        elif self.storage.length < self.capacity:
+        if not self.current:
+            # If self.current is None, the list isn't full yet
             self.storage.add_to_tail(item)
+            if self.storage.length == self.capacity:
+                # If this puts the list at capacity, set self.current
+                # to the head. (self.current is basically the node
+                # that will get replaced if a new value is appended.)
+                self.current = self.storage.head
         else:
             if self.current is self.storage.head:
+                # Replace the head
+                self.current = self.storage.head.next
                 self.storage.remove_from_head()
                 self.storage.add_to_head(item)
-                if self.storage.head.next:
-                    self.current = self.storage.head.next
-                else:
-                    self.current = self.storage.head
             elif self.current is self.storage.tail:
+                # Replace the tail
+                self.current = self.storage.head
                 self.storage.remove_from_tail()
                 self.storage.add_to_tail(item)
-                self.current = self.storage.head
             else:
+                # Log self.current's next and prev, then delete it.
                 current_next = self.current.next
                 current_prev = self.current.prev
                 self.storage.delete(self.current)
-                new_node = ListNode(item)
+                # Set the new self.current
+                self.current = current_next
+                # Keep track of the tail, since we'll be adding the
+                # new value as the tail temporarily.
+                tail = self.storage.tail
+                self.storage.add_to_tail(item)
+                # Set the new node's next and prev to be the same as
+                # the old self.current.
+                new_node = self.storage.tail
                 new_node.next = current_next
                 new_node.prev = current_prev
+                # Also fix the directions for the nodes that surround the new node
                 current_next.prev = new_node
                 current_prev.next = new_node
-                self.storage.length += 1
-                self.current = new_node.next
+                # Finally, set the tail back to being the proper tail,
+                # and make sure it has no "next" node.
+                self.storage.tail = tail
+                self.storage.tail.next = None
 
     def get(self):
         # Note:  This is the only [] allowed
@@ -43,10 +57,9 @@ class RingBuffer:
 
         # TODO: Your code here
         node = self.storage.head
-        list_buffer_contents.append(node.value)
-        while node.next:
-            node = node.next
+        while node:
             list_buffer_contents.append(node.value)
+            node = node.next
         return list_buffer_contents
 
 # ----------------Stretch Goal-------------------
